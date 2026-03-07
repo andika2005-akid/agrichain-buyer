@@ -1,0 +1,161 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Gov-tech navy + gold agricultural theme */
+    --background: 220 25% 97%;
+    --foreground: 220 30% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 30% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 30% 12%;
+
+    --primary: 210 80% 25%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 175 45% 40%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 20% 93%;
+    --muted-foreground: 220 15% 50%;
+
+    --accent: 42 90% 55%;
+    --accent-foreground: 220 30% 12%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 210 80% 25%;
+
+    --radius: 0.625rem;
+
+    /* Custom tokens */
+    --success: 152 60% 42%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 220 30% 12%;
+    --info: 210 80% 55%;
+    --info-foreground: 0 0% 100%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(210 80% 25%), hsl(210 70% 35%));
+    --gradient-accent: linear-gradient(135deg, hsl(42 90% 55%), hsl(38 92% 50%));
+    --gradient-hero: linear-gradient(135deg, hsl(210 80% 18%), hsl(175 45% 30%), hsl(210 70% 22%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(220 25% 97%));
+    --gradient-success: linear-gradient(135deg, hsl(152 60% 42%), hsl(160 55% 48%));
+
+    /* Shadows */
+    --shadow-sm: 0 1px 3px hsl(220 30% 12% / 0.06);
+    --shadow-md: 0 4px 16px hsl(220 30% 12% / 0.08);
+    --shadow-lg: 0 8px 32px hsl(220 30% 12% / 0.12);
+    --shadow-glow: 0 0 20px hsl(210 80% 25% / 0.15);
+
+    --sidebar-background: 210 80% 18%;
+    --sidebar-foreground: 210 20% 90%;
+    --sidebar-primary: 42 90% 55%;
+    --sidebar-primary-foreground: 220 30% 12%;
+    --sidebar-accent: 210 60% 28%;
+    --sidebar-accent-foreground: 210 20% 90%;
+    --sidebar-border: 210 50% 25%;
+    --sidebar-ring: 42 90% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+  .gradient-accent {
+    background: var(--gradient-accent);
+  }
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+  .gradient-card {
+    background: var(--gradient-card);
+  }
+  .gradient-success {
+    background: var(--gradient-success);
+  }
+  .shadow-card {
+    box-shadow: var(--shadow-md);
+  }
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+  .glass {
+    backdrop-filter: blur(12px);
+    background: hsl(0 0% 100% / 0.8);
+    border: 1px solid hsl(220 15% 88% / 0.5);
+  }
+}
+
+/* Leaflet fixes */
+.leaflet-container {
+  border-radius: var(--radius);
+  z-index: 0;
+}
+
+/* Hide scrollbar while keeping scroll functionality */
+html {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
+body {
+  scrollbar-width: none;
+}
+
+body::-webkit-scrollbar {
+  display: none;
+}
+
+/* Main content scrollbar styling */
+main {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+main::-webkit-scrollbar {
+  width: 8px;
+}
+
+main::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+main::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+main::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+  background-clip: content-box;
+}
