@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { plantingRecords, harvestRecords } from "@/data/mockData";
+import { useAuth } from "@/hooks/useAuth";
+import { farmerApplications } from "@/data/mockData";
 import { motion } from "framer-motion";
-import { kurApplications } from "@/data/mockData";
+import { fundingProposals } from "@/data/mockData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,45 +49,82 @@ interface ProposalAnalysis {
   estimasiHasilPanen: number;
   estimasiProfit: number;
   roiInvestasi: number;
+  skorKelayakan: number;
   faktorPenilaian: string[];
   risikoFaktor: { faktor: string; tingkat: string }[];
 }
 
 export default function AnalisisProposalPage() {
   const { toast } = useToast();
+    const { role } = useAuth();
 
-  // Transform kurApplications to analysis format
-  const baseProposals: ProposalAnalysis[] = kurApplications.map((kur) => ({
-    id: kur.id,
-    farmerName: kur.farmerName,
-    namaUsaha: `Usaha ${kur.farmerName}`,
-    lokasi: "Jawa Barat",
-    lamaUsaha: 5,
-    komoditas: kur.komoditas,
-    luasLahan: kur.tenor / 12,
-    musimTanam: kur.komoditas === "Padi" ? "Musim Hujan" : "Musim Kemarau",
-    estimasiPanen: "3-4 Bulan",
-    danaDiminta: kur.jumlahPinjaman,
-    tujuanPendanaan: kur.tujuanPendanaan,
-    estimasiHasilPanen: Math.round((kur.jumlahPinjaman / 1e6) * 5),
-    estimasiProfit: Math.round(kur.jumlahPinjaman * 0.4),
-    roiInvestasi: 40,
-    faktorPenilaian: [
-      "Luas lahan memadai",
-      "Pengalaman petani baik",
-      "Estimasi hasil panen tinggi",
-      "Permintaan pasar stabil",
-    ],
-    risikoFaktor: [
-      { faktor: "Cuaca", tingkat: "sedang" },
-      { faktor: "Hama", tingkat: "rendah" },
-      { faktor: "Harga Pasar", tingkat: "sedang" },
-    ],
-  }));
+  // Mock data fallback jika fundingProposals kosong
+  const mockProposalsData = fundingProposals.length > 0 ? fundingProposals : [
+    { id: "PROP001", farmer: "Andi Pratama", commodity: "Padi", requestedAmount: 50000000, region: "Jawa Barat", harvestDate: "2026-06-15", notes: "Modal tanam" },
+    { id: "PROP002", farmer: "Budi Santoso", commodity: "Jagung", requestedAmount: 35000000, region: "Jawa Tengah", harvestDate: "2026-07-20", notes: "Pembelian bibit" },
+    { id: "PROP003", farmer: "Siti Nurhaliza", commodity: "Cabai", requestedAmount: 45000000, region: "Sulawesi Selatan", harvestDate: "2026-08-10", notes: "Modal operasional" },
+  ];
+
+  // Transform fundingProposals to analysis format
+  const baseProposals: ProposalAnalysis[] = (mockProposalsData as unknown as Array<any>).map((proposal) => {
+    // Support both older demo shape and current `fundingProposals` shape
+    const farmerName = proposal.farmerName || proposal.farmer || "Petani"
+    const requested = proposal.totalFundRequested ?? proposal.totalFundRequested ?? proposal.requestedAmount ?? 0
+    const projectedProfit = proposal.projectedProfit ?? proposal.projected_profit ?? (proposal.projected || 0)
+    const commodity = proposal.commodity || proposal.commodityType || proposal.commodityName || "N/A"
+    const region = proposal.region || proposal.location?.label || proposal.location || "Jawa Barat"
+
+    return {
+      id: proposal.id,
+      farmerName,
+      namaUsaha: `Usaha ${farmerName}`,
+      lokasi: region,
+      lamaUsaha: 5,
+      komoditas: commodity,
+      luasLahan: proposal.areaHa ?? proposal.luasLahan ?? 2,
+      musimTanam: commodity === "Padi" ? "Musim Hujan" : "Musim Kemarau",
+      estimasiPanen: proposal.harvestPeriod ?? proposal.estimasiPanen ?? "3-4 Bulan",
+      danaDiminta: requested,
+      tujuanPendanaan: proposal.notes || proposal.tujuanPendanaan || "Modal produksi pertanian",
+      estimasiHasilPanen: Math.round((requested / 1e6) * 5),
+      estimasiProfit: Math.round(projectedProfit || requested * 0.4),
+      roiInvestasi: Math.round((projectedProfit || requested * 0.4) / (requested || 1) * 100) || 0,
+      skorKelayakan: proposal.skorKelayakan ?? 78,
+      faktorPenilaian: proposal.faktorPenilaian ?? [
+        "Luas lahan memadai",
+        "Pengalaman petani baik",
+        "Estimasi hasil panen tinggi",
+        "Permintaan pasar stabil",
+      ],
+      risikoFaktor: proposal.risikoFaktor ?? [
+        { faktor: "Cuaca", tingkat: "sedang" },
+        { faktor: "Hama", tingkat: "rendah" },
+        { faktor: "Harga Pasar", tingkat: "sedang" },
+      ],
+    }
+  });
 
   // State
   const [selectedProposal, setSelectedProposal] = useState<ProposalAnalysis>(
-    baseProposals[0]
+    baseProposals[0] || {
+      id: "N/A",
+      farmerName: "Tidak ada proposal",
+      namaUsaha: "N/A",
+      lokasi: "N/A",
+      lamaUsaha: 0,
+      komoditas: "N/A",
+      luasLahan: 0,
+      musimTanam: "N/A",
+      estimasiPanen: "N/A",
+      danaDiminta: 0,
+      tujuanPendanaan: "N/A",
+      estimasiHasilPanen: 0,
+      estimasiProfit: 0,
+      roiInvestasi: 0,
+      skorKelayakan: 0,
+      faktorPenilaian: [],
+      risikoFaktor: [],
+    }
   );
   const [catatan, setCatatan] = useState("");
   const [keputusan, setKeputusan] = useState<"setuju" | "tolak" | null>(null);
@@ -208,6 +248,42 @@ export default function AnalisisProposalPage() {
                 </p>
               </div>
             </div>
+              {/* Riwayat Tani - Only for investor role */}
+              {role === "investor" && (
+                <div className="mt-6">
+                  <h3 className="text-md font-bold mb-2">Riwayat Tanam & Panen</h3>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-xs border">
+                      <thead>
+                        <tr className="bg-muted">
+                          <th className="px-2 py-1">Tanggal Tanam</th>
+                          <th className="px-2 py-1">Komoditas</th>
+                          <th className="px-2 py-1">Luas Tanam</th>
+                          <th className="px-2 py-1">Jenis Benih</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const records = plantingRecords
+                            .filter((r) => r.farmerName === selectedProposal.farmerName)
+                            .sort((a, b) => new Date(b.tanggalTanam).getTime() - new Date(a.tanggalTanam).getTime());
+                          const latest = records[0];
+                          return latest ? (
+                            <tr key={latest.id}>
+                              <td className="px-2 py-1">{latest.tanggalTanam}</td>
+                              <td className="px-2 py-1">{latest.komoditas}</td>
+                              <td className="px-2 py-1">{latest.luasTanam} ha</td>
+                              <td className="px-2 py-1">{latest.jenisBenih}</td>
+                            </tr>
+                          ) : null;
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="overflow-x-auto mt-4">
+                  </div>
+                </div>
+              )}
           </CardContent>
         </Card>
       </motion.div>
@@ -322,9 +398,9 @@ export default function AnalisisProposalPage() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm mb-1">
                   <span>Skor Kelayakan</span>
-                  <span>{selectedProposal.roiInvestasi}/100</span>
+                  <span>{selectedProposal.skorKelayakan}/100</span>
                 </div>
-                <Progress value={selectedProposal.roiInvestasi} className="bg-white/30" />
+                <Progress value={selectedProposal.skorKelayakan} className="bg-white/30" />
               </div>
             </div>
 

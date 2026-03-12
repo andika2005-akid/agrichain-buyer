@@ -1,10 +1,9 @@
-import { useState } from "react";
 import { motion } from "framer-motion";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -82,16 +81,16 @@ export default function BankKURAnalysisPage() {
 
   const selectedFarmer =
     selectedRequest &&
-    farmerApplications.find((f) => f.id === selectedRequest.farmerId);
+    farmerApplications.find((f: any) => f.id === selectedRequest.farmerId);
 
   // Get data tanam for selected farmer
   const farmerPlantingRecords = selectedRequest
-    ? plantingRecords.filter((p) => p.farmerId === selectedRequest.farmerId)
+    ? plantingRecords.filter((p: any) => p.farmerId === selectedRequest.farmerId)
     : [];
 
   // Get data panen for selected farmer
   const farmerHarvestRecords = selectedRequest
-    ? harvestRecords.filter((h) => h.farmerId === selectedRequest.farmerId)
+    ? harvestRecords.filter((h: any) => h.farmerId === selectedRequest.farmerId)
     : [];
 
   const handleApproveRequest = (id: string) => {
@@ -199,7 +198,7 @@ export default function BankKURAnalysisPage() {
     }
   };
 
-  const calculateRiskScore = (farmer: typeof farmerApplications[0] | undefined) => {
+  const calculateRiskScore = (farmer: any) => {
     if (!farmer) return 0;
     return farmer.eligibilityScore || 0;
   };
@@ -210,7 +209,7 @@ export default function BankKURAnalysisPage() {
     return { label: "High", color: "text-red-600", bg: "bg-red-50" };
   };
 
-  const predictHarvestYield = (farmer: typeof farmerApplications[0] | undefined, komoditas: string) => {
+  const predictHarvestYield = (farmer: any, komoditas: string) => {
     if (!farmer) return "Data tidak tersedia";
     const baseYield = farmer.area * 5; // Asumsi 5 ton per hektar
     const scoreMultiplier = farmer.eligibilityScore / 100;
@@ -288,15 +287,15 @@ export default function BankKURAnalysisPage() {
             </TableHeader>
             <TableBody>
               {requests.map((req) => {
-                const farmer = farmerApplications.find(f => f.id === req.farmerId);
+                const farmer = farmerApplications.find((f: any) => f.id === req.farmerId);
                 return (
                   <TableRow key={req.id}>
                     <TableCell className="font-mono">{req.id}</TableCell>
                     <TableCell>{req.farmerName}</TableCell>
                     <TableCell>{req.komoditas}</TableCell>
-                    <TableCell>{farmer ? `${farmer.area} Ha` : '-'}</TableCell>
+                    <TableCell>{farmer ? `${(farmer as any).area} Ha` : '-'}</TableCell>
                     <TableCell>Rp {req.jumlahPinjaman.toLocaleString("id-ID")}</TableCell>
-                    <TableCell>{farmer ? (farmer.eligibilityScore >= 75 ? 'Low' : farmer.eligibilityScore >= 50 ? 'Medium' : 'High') : '-'}</TableCell>
+                    <TableCell>{farmer ? ((farmer as any).eligibilityScore >= 75 ? 'Low' : (farmer as any).eligibilityScore >= 50 ? 'Medium' : 'High') : '-'}</TableCell>
                     <TableCell>
                       <Badge variant={req.status === 'submitted' ? 'default' : req.status === 'approved' ? 'outline' : req.status === 'rejected' ? 'destructive' : 'outline'}>
                         {req.status === 'submitted' ? 'Menunggu' : req.status === 'approved' ? 'Disetujui' : req.status === 'rejected' ? 'Ditolak' : 'Dicairkan'}
@@ -345,12 +344,12 @@ export default function BankKURAnalysisPage() {
                   <div>
                     <p className="text-xs text-muted-foreground">Lokasi Lahan</p>
                     <p className="text-sm font-semibold text-foreground flex items-center gap-1">
-                      <MapPin className="w-4 h-4" /> {selectedFarmer.province || '-'}
+                      <MapPin className="w-4 h-4" /> {(selectedFarmer as any).province || '-'}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Luas Lahan</p>
-                    <p className="text-sm font-semibold text-foreground">{selectedFarmer.area} Ha</p>
+                    <p className="text-sm font-semibold text-foreground">{(selectedFarmer as any).area} Ha</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Komoditas</p>
@@ -368,7 +367,7 @@ export default function BankKURAnalysisPage() {
                 </h3>
                 {farmerHarvestRecords && farmerHarvestRecords.length > 0 ? (
                   <div className="pl-6 space-y-3">
-                    {farmerHarvestRecords.map((harvest) => (
+                    {farmerHarvestRecords.map((harvest: any) => (
                       <div key={harvest.id} className="bg-green-50 rounded-lg p-3 border border-green-200">
                         <div className="grid grid-cols-2 gap-2 mb-2">
                           <div>

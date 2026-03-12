@@ -1,0 +1,1038 @@
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { ongoingSubsidyPrograms, SubsidyProgram, subsidyProgramApplications, SubsidyProgramApplication, farmerApplications } from "@/data/mockData";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CheckCircle2, Clock, AlertCircle, Calendar, Plus, ChevronDown, Shield, DollarSign, Users, ChevronRight } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { Textarea } from "@/components/ui/textarea";
+
+export default function ProgramSubsidiPage() {
+  const { toast } = useToast();
+  const { role } = useAuth();
+  const [selectedTab, setSelectedTab] = useState("semua");
+  const [selectedProgram, setSelectedProgram] = useState<SubsidyProgram | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showSmartContractModal, setShowSmartContractModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [showApplicationHistoryModal, setShowApplicationHistoryModal] = useState(false);
+  const [expandedSmartContract, setExpandedSmartContract] = useState<string | null>(null);
+  const [selectedCommodity, setSelectedCommodity] = useState("");
+  const [newProgram, setNewProgram] = useState({
+    name: "",
+    description: "",
+    subsidyType: "",
+    maxBudget: 0,
+    deadline: "",
+  });
+
+  const isKementerian = role === "kementerian";
+  const isPetani = role === "petani";
+  const userFarmerId = "F001"; // Ahmad Suryadi
+  const userFarmer = farmerApplications.find(f => f.id === userFarmerId);
+
+  // Get user's applications for the selected program
+  const userApplicationsForSelectedProgram = selectedProgram
+    ? subsidyProgramApplications.filter(
+        (app) =>
+          app.farmerId === userFarmerId && app.programId === selectedProgram.id
+      )
+    : [];
+
+  // Get all user's applications across all programs
+  const userApplicationsAll = subsidyProgramApplications.filter(
+    (app) => app.farmerId === userFarmerId
+  );
+
+  const approvedApplications = userApplicationsAll.filter(
+    (app) => app.status === "approved"
+  );
+  const rejectedApplications = userApplicationsAll.filter(
+    (app) => app.status === "rejected"
+  );
+
+  const petaniStats = {
+    totalApplications: userApplicationsAll.length,
+    approved: approvedApplications.length,
+    rejected: rejectedApplications.length,
+    totalReceived: approvedApplications.reduce(
+      (sum, app) => sum + app.requestedAmount,
+      0
+    ),
+  };
+
+  const filteredPrograms =
+    selectedTab === "semua"
+      ? ongoingSubsidyPrograms
+      : selectedTab === "berjalan"
+        ? ongoingSubsidyPrograms.filter((p) => p.status === "active")
+        : selectedTab === "tertutup"
+          ? ongoingSubsidyPrograms.filter((p) => p.status === "closed")
+          : ongoingSubsidyPrograms.filter((p) => p.status === "draft");
+
+  const handleDetailClick = (program: SubsidyProgram) => {
+    setSelectedProgram(program);
+    setShowDetailModal(true);
+  };
+
+  const handleSmartContractClick = (program: SubsidyProgram) => {
+    setSelectedProgram(program);
+    setShowSmartContractModal(true);
+  };
+
+  const handleApplyClick = (program: SubsidyProgram) => {
+    if (!userFarmer) {
+      toast({
+        title: "Error",
+        description: "Data petani tidak ditemukan",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSelectedProgram(program);
+    setShowApplyModal(true);
+  };
+
+  const checkEligibility = (program: SubsidyProgram) => {
+    if (!userFarmer) return { eligible: false, reasons: [], percentage: 0 };
+    
+    const sc = program.smartContract;
+    const issues: string[] = [];
+    let passedCriteria = 0;
+    const totalCriteria = 5; // land area, score, risk, commodity, province
+
+    // Check land area
+    if (userFarmer.area < sc.minLandArea || userFarmer.area > sc.maxLandArea) {
+      issues.push(`Luas lahan (${userFarmer.area} ha) di luar range ${sc.minLandArea}-${sc.maxLandArea} ha`);
+    } else {
+      passedCriteria++;
+    }
+
+    // Check eligibility score
+    if (userFarmer.eligibilityScore < sc.minEligibilityScore) {
+      issues.push(`Skor kelayakan (${userFarmer.eligibilityScore}) di bawah minimum (${sc.minEligibilityScore})`);
+    } else {
+      passedCriteria++;
+    }
+
+    // Check risk level
+    if (!sc.allowedRiskLevels.includes(userFarmer.riskLevel)) {
+      issues.push(`Tingkat risiko (${userFarmer.riskLevel}) tidak sesuai kriteria`);
+    } else {
+      passedCriteria++;
+    }
+
+    // Check commodity
+    if (!sc.allowedCommodities.includes(userFarmer.commodity)) {
+      issues.push(`Komoditas (${userFarmer.commodity}) tidak termasuk dalam program`);
+    } else {
+      passedCriteria++;
+    }
+
+    // Check province
+    if (!sc.allowedProvinces.includes(userFarmer.province)) {
+      issues.push(`Provinsi (${userFarmer.province}) tidak termasuk cakupan program`);
+    } else {
+      passedCriteria++;
+    }
+
+    const percentage = Math.round((passedCriteria / totalCriteria) * 100);
+
+    return {
+      eligible: issues.length === 0,
+      reasons: issues,
+      percentage: percentage,
+    };
+  };
+
+
+  const stats = {
+    totalProgram: ongoingSubsidyPrograms.length,
+    programAktif: ongoingSubsidyPrograms.filter((p) => p.status === "active").length,
+    programTertutup: ongoingSubsidyPrograms.filter((p) => p.status === "closed").length,
+    totalBudget: ongoingSubsidyPrograms.reduce((sum, p) => sum + p.maxBudget, 0),
+    totalApplicants: ongoingSubsidyPrograms.reduce((sum, p) => sum + p.totalApplicants, 0),
+  };
+
+  const handleCreateProgram = () => {
+    if (!newProgram.name || !newProgram.description || !newProgram.subsidyType || !newProgram.maxBudget || !newProgram.deadline) {
+      toast({
+        title: "Data tidak lengkap",
+        description: "Mohon isikan semua field yang diperlukan",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    toast({
+      title: "Program Berhasil Dibuat",
+      description: `Program "${newProgram.name}" telah dibuat dan tersimpan di blockchain`,
+    });
+    
+    setShowCreateModal(false);
+    setNewProgram({
+      name: "",
+      description: "",
+      subsidyType: "",
+      maxBudget: 0,
+      deadline: "",
+    });
+  };
+
+  const getSmartContractInfo = (program: SubsidyProgram) => {
+    const sc = program.smartContract;
+    return [
+      { label: "Luas Lahan", value: `${sc.minLandArea} - ${sc.maxLandArea} ha` },
+      { label: "Skor Kelayakan", value: `${sc.minEligibilityScore} - ${sc.maxEligibilityScore}` },
+      { label: "Tingkat Risiko", value: sc.allowedRiskLevels.join(", ") },
+      { label: "Komoditas", value: sc.allowedCommodities.join(", ") },
+      { label: "Provinsi", value: sc.allowedProvinces.join(", ") },
+      { label: "Maksimal Subsidi", value: `Rp ${sc.maxSubsidyAmount.toLocaleString("id-ID")}` },
+      { label: "Threshold Otomatis", value: `Score ≥ ${sc.automaticApprovalThreshold}` },
+    ];
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(value);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "approved":
+      case "disetujui":
+        return "bg-emerald-100 text-emerald-800";
+      case "rejected":
+      case "ditolak":
+        return "bg-red-100 text-red-800";
+      case "under_review":
+      case "submitted":
+      case "diproses":
+        return "bg-yellow-100 text-yellow-800";
+      case "disbursed":
+        return "bg-blue-100 text-blue-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      draft: "Draft",
+      submitted: "Terkirim",
+      under_review: "Sedang Diproses",
+      approved: "Disetujui",
+      rejected: "Ditolak",
+      disbursed: "Dicairkan",
+      disetujui: "Disetujui",
+      ditolak: "Ditolak",
+      diproses: "Sedang Diproses",
+    };
+    return labels[status] || status;
+  };
+
+  return (
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold font-display text-foreground">
+            {isKementerian ? "Kelola Program Subsidi" : isPetani ? "Program Subsidi Pertanian" : "Program Subsidi Pertanian"}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {isKementerian
+              ? "Buat, kelola, dan pantau program subsidi dengan smart contract"
+              : isPetani
+                ? "Lihat dan ajukan program subsidi yang sedang berjalan"
+                : "Lihat daftar program subsidi yang sedang berjalan"}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          {isKementerian && (
+            <Button onClick={() => setShowCreateModal(true)} className="gap-2">
+              <Plus className="w-4 h-4" />
+              Program Baru
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Summary Cards - Show different stats for petani */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`grid ${isPetani ? "grid-cols-1 md:grid-cols-4" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-5"} gap-3`}
+      >
+        {isPetani ? (
+          <>
+            <Card className="p-4">
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Total Pengajuan</p>
+                <p className="text-3xl font-bold">{petaniStats.totalApplications}</p>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Disetujui</p>
+                <p className="text-3xl font-bold text-emerald-600">{petaniStats.approved}</p>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Ditolak</p>
+                <p className="text-3xl font-bold text-red-600">{petaniStats.rejected}</p>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Total Diterima</p>
+                <p className="text-2xl font-bold">{(petaniStats.totalReceived / 1000000).toFixed(0)}M</p>
+              </div>
+            </Card>
+          </>
+        ) : (
+          <>
+            <Card className="p-4">
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Total Program</p>
+                <p className="text-3xl font-bold">{stats.totalProgram}</p>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Program Aktif</p>
+                <p className="text-3xl font-bold text-emerald-600">{stats.programAktif}</p>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Total Pemohon</p>
+                <p className="text-3xl font-bold">{stats.totalApplicants.toLocaleString("id-ID")}</p>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Total Budget</p>
+                <p className="text-2xl font-bold">{(stats.totalBudget / 1000000000).toFixed(0)}M</p>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Approval Rate</p>
+                <p className="text-3xl font-bold">
+                  {stats.totalApplicants > 0 
+                    ? ((stats.programAktif / stats.totalProgram) * 100).toFixed(0)
+                    : 0}%
+                </p>
+              </div>
+            </Card>
+          </>
+        )}
+      </motion.div>
+
+      {/* Tabs */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+        <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="semua">Semua ({ongoingSubsidyPrograms.length})</TabsTrigger>
+            <TabsTrigger value="berjalan">Aktif ({stats.programAktif})</TabsTrigger>
+            <TabsTrigger value="tertutup">Tertutup ({stats.programTertutup})</TabsTrigger>
+            {isKementerian && <TabsTrigger value="draft">Draft</TabsTrigger>}
+          </TabsList>
+
+          <TabsContent value={selectedTab} className="space-y-4 mt-6">
+            {filteredPrograms.length === 0 ? (
+              <Card className="p-12 text-center">
+                <AlertCircle className="w-10 h-10 mx-auto text-muted-foreground/50 mb-2" />
+                <p className="text-sm text-muted-foreground">Tidak ada program dalam kategori ini</p>
+              </Card>
+            ) : (
+              filteredPrograms.map((program) => (
+                <div key={program.id} className="border rounded-lg p-5 transition hover:shadow-md hover:border-primary/50">
+                  <div className="space-y-4">
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="text-lg font-semibold text-foreground">{program.name}</h3>
+                          <Badge
+                            variant={program.available ? "default" : "secondary"}
+                            className="text-xs"
+                          >
+                            {program.status === "active" && "Aktif"}
+                            {program.status === "closed" && "Tertutup"}
+                            {program.status === "draft" && "Draft"}
+                            {program.status === "suspended" && "Suspended"}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{program.description}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground mb-1">ID</p>
+                        <p className="font-mono text-sm font-semibold">{program.id}</p>
+                      </div>
+                    </div>
+
+                    {/* Info Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Deadline</p>
+                          <p className="text-foreground">{new Date(program.deadline).toLocaleDateString("id-ID")}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="w-4 h-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Budget</p>
+                          <p className="text-foreground">{(program.allocatedBudget / 1000000000).toFixed(1)}M</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Pemohon</p>
+                          <p className="text-foreground">{program.totalApplicants.toLocaleString("id-ID")}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Disetujui</p>
+                          <p className="text-foreground">{program.approvedApplicants.toLocaleString("id-ID")}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Smart Contract Terms */}
+                    <div className="bg-muted/30 rounded p-3 space-y-2">
+                      <button
+                        onClick={() =>
+                          setExpandedSmartContract(
+                            expandedSmartContract === program.id ? null : program.id
+                          )
+                        }
+                        className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition"
+                      >
+                        <Shield className="w-4 h-4" />
+                        Syarat Smart Contract
+                        <ChevronDown
+                          className={`w-4 h-4 transition ${
+                            expandedSmartContract === program.id ? "rotate-180" : ""
+                          }`}
+                        />
+                      </button>
+
+                      {expandedSmartContract === program.id && (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-3 text-xs">
+                          {getSmartContractInfo(program).map((item, idx) => (
+                            <div key={idx} className="bg-background rounded p-2">
+                              <p className="text-muted-foreground">{item.label}</p>
+                              <p className="text-foreground font-medium">{item.value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-2 flex-wrap">
+                      <Button variant="outline" size="sm" onClick={() => handleDetailClick(program)}>
+                        Detail
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSmartContractClick(program)}
+                        className="gap-2"
+                      >
+                        <Shield className="w-4 h-4" />
+                        Smart Contract
+                      </Button>
+                      {isPetani && program.status === "active" && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleApplyClick(program)}
+                          className="gap-2"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Ajukan
+                        </Button>
+                      )}
+                      {isKementerian && program.status === "active" && (
+                        <>
+                          <Button variant="outline" size="sm">Kelola Aplikasi</Button>
+                          <Button variant="outline" size="sm" className="text-destructive">Tutup Program</Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </TabsContent>
+        </Tabs>
+      </motion.div>
+
+      {/* Detail Modal */}
+      <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{selectedProgram?.name}</DialogTitle>
+          </DialogHeader>
+          {selectedProgram && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-medium text-foreground mb-1">Deskripsi</p>
+                <p className="text-sm text-muted-foreground">{selectedProgram.description}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground mb-2">Persyaratan Program</p>
+                <ul className="space-y-1">
+                  {selectedProgram.requirements.map((req, idx) => (
+                    <li key={idx} className="text-sm text-muted-foreground flex gap-2">
+                      <span className="text-primary">•</span>
+                      {req}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button onClick={() => setShowDetailModal(false)} variant="outline">
+                  Tutup
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Smart Contract Modal */}
+      <Dialog open={showSmartContractModal} onOpenChange={setShowSmartContractModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              Syarat Smart Contract - {selectedProgram?.id}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedProgram && (
+            <div className="space-y-4">
+              <div className="bg-accent/10 border border-accent/20 rounded p-3">
+                <p className="text-sm text-foreground">
+                  Smart contract akan secara otomatis memvalidasi setiap aplikasi berdasarkan syarat-syarat di bawah.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {getSmartContractInfo(selectedProgram).map((item, idx) => (
+                  <Card key={idx} className="p-3">
+                    <p className="text-xs text-muted-foreground mb-1">{item.label}</p>
+                    <p className="text-sm font-medium text-foreground">{item.value}</p>
+                  </Card>
+                ))}
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button onClick={() => setShowSmartContractModal(false)} variant="outline">
+                  Tutup
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Program Modal */}
+      {isKementerian && (
+        <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Buat Program Subsidi Baru</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium">Nama Program</Label>
+                <Input
+                  placeholder="Contoh: Program Subsidi Pupuk 2026"
+                  value={newProgram.name}
+                  onChange={(e) => setNewProgram({ ...newProgram, name: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium">Deskripsi Program</Label>
+                <Textarea
+                  placeholder="Jelaskan tujuan dan detail program subsidi..."
+                  value={newProgram.description}
+                  onChange={(e) => setNewProgram({ ...newProgram, description: e.target.value })}
+                  className="mt-1 min-h-24"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Tipe Subsidi</Label>
+                  <Select value={newProgram.subsidyType} onValueChange={(v) => setNewProgram({ ...newProgram, subsidyType: v })}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Pilih tipe" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Pupuk">Pupuk</SelectItem>
+                      <SelectItem value="Benih">Benih</SelectItem>
+                      <SelectItem value="Alat">Alat & Mesin</SelectItem>
+                      <SelectItem value="Irigasi">Irigasi</SelectItem>
+                      <SelectItem value="Tunai">Bantuan Tunai</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium">Max Budget (Miliar)</Label>
+                  <Input
+                    type="number"
+                    placeholder="500"
+                    value={newProgram.maxBudget / 1000000000}
+                    onChange={(e) => setNewProgram({ ...newProgram, maxBudget: parseFloat(e.target.value) * 1000000000 })}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium">Deadline Pendaftaran</Label>
+                <Input
+                  type="date"
+                  value={newProgram.deadline}
+                  onChange={(e) => setNewProgram({ ...newProgram, deadline: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button onClick={() => setShowCreateModal(false)} variant="outline">
+                  Batal
+                </Button>
+                <Button onClick={handleCreateProgram} className="flex-1">
+                  Buat Program & Deploy Smart Contract
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Apply Program Modal - For Petani */}
+      {isPetani && (
+        <Dialog open={showApplyModal} onOpenChange={setShowApplyModal}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{selectedProgram?.name}</DialogTitle>
+            </DialogHeader>
+            {selectedProgram && (
+              <div className="space-y-4">
+                {/* Eligibility Check */}
+                {(() => {
+                  const eligibility = checkEligibility(selectedProgram);
+                  return eligibility.eligible ? (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded p-3">
+                      <p className="text-sm text-emerald-800">
+                        ✓ Profil Anda memenuhi syarat ({eligibility.percentage}% memenuhi kriteria)
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-red-50 border border-red-200 rounded p-3">
+                      <p className="text-sm font-medium text-red-800 mb-2">Tidak Bisa Mengajukan ({eligibility.percentage}% memenuhi kriteria):</p>
+                      <ul className="space-y-1">
+                        {eligibility.reasons.map((reason, idx) => (
+                          <li key={idx} className="text-xs text-red-700 flex gap-2">
+                            <span>•</span>
+                            {reason}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })()}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Luas Lahan Anda</Label>
+                    <p className="text-lg font-semibold">{userFarmer?.area} ha</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Skor Kelayakan</Label>
+                    <p className="text-lg font-semibold">{userFarmer?.eligibilityScore}/100</p>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium">Komoditas yang Akan Ditanam *</Label>
+                  <Select value={selectedCommodity} onValueChange={setSelectedCommodity}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Pilih komoditas..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedProgram.smartContract.allowedCommodities.map((commodity: string) => (
+                        <SelectItem key={commodity} value={commodity}>
+                          {commodity}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="bg-accent/10 border border-accent/20 rounded p-3">
+                  <div className="flex gap-2 items-start">
+                    <Shield className="w-4 h-4 text-accent flex-shrink-0 mt-1" />
+                    <p className="text-xs text-muted-foreground">
+                      Data Anda akan divalidasi oleh smart contract. Jika skor kelayakan Anda mencapai threshold otomatis ({selectedProgram.smartContract.automaticApprovalThreshold}+), permohonan akan otomatis disetujui dan dicatat di blockchain.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    onClick={() => {
+                      setShowApplyModal(false);
+                      setSelectedCommodity("");
+                    }}
+                    variant="outline"
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (!selectedCommodity) {
+                        toast({
+                          title: "Form Belum Lengkap",
+                          description: "Silakan pilih komoditas yang akan ditanam.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+
+                      toast({
+                        title: "Pengajuan Terkirim",
+                        description: `Pengajuan untuk ${selectedCommodity} telah terkirim. Silakan tunggu hasil verifikasi.`,
+                      });
+                      setShowApplyModal(false);
+                      setSelectedCommodity("");
+                    }}
+                    className="flex-1"
+                    disabled={!selectedCommodity}
+                  >
+                    Kirim Pengajuan
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Application History Modal - For Petani */}
+      {isPetani && (
+        <Dialog open={showApplicationHistoryModal} onOpenChange={setShowApplicationHistoryModal}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <div className="space-y-4">
+              <Tabs defaultValue="aktif" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="aktif">Aktif</TabsTrigger>
+                  <TabsTrigger value="tertutup">Tertutup</TabsTrigger>
+                  <TabsTrigger value="riwayat">Riwayat Pengajuan</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="aktif" className="mt-4">
+                  <div className="space-y-3">
+                    {ongoingSubsidyPrograms
+                      .filter(p => p.status === "active")
+                      .map((program) => {
+                        const eligibility = checkEligibility(program);
+                        return (
+                          <Card key={program.id} className="p-4">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <h3 className="text-lg font-semibold text-foreground">{program.name}</h3>
+                                  <Badge className="bg-emerald-100 text-emerald-800">Aktif</Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground mb-3">{program.description}</p>
+                                
+                                <div className="flex items-center gap-2 mb-3">
+                                  <div className={`px-2 py-1 rounded text-xs font-medium ${
+                                    eligibility.eligible 
+                                      ? "bg-emerald-100 text-emerald-800" 
+                                      : "bg-red-100 text-red-800"
+                                  }`}>
+                                    {eligibility.percentage}% Memenuhi Syarat
+                                  </div>
+                                  {eligibility.eligible && (
+                                    <Badge variant="outline" className="text-xs">Bisa Ajukan</Badge>
+                                  )}
+                                </div>
+
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Luas Lahan</p>
+                                    <p className="font-medium">{program.smartContract.minLandArea}-{program.smartContract.maxLandArea} ha</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Komoditas</p>
+                                    <p className="font-medium">{program.smartContract.allowedCommodities.join(", ")}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Deadline</p>
+                                    <p className="font-medium">{new Date(program.deadline).toLocaleDateString("id-ID")}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Max Subsidi</p>
+                                    <p className="font-medium text-emerald-600">{formatCurrency(program.smartContract.maxSubsidyAmount)}</p>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex flex-col gap-2">
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => handleApplyClick(program)}
+                                  disabled={!eligibility.eligible}
+                                  className="gap-1"
+                                >
+                                  <Plus className="w-4 h-4" />
+                                  Ajukan
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => handleDetailClick(program)}
+                                >
+                                  Detail
+                                </Button>
+                              </div>
+                            </div>
+                          </Card>
+                        );
+                      })}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="tertutup" className="mt-4">
+                  <div className="space-y-3">
+                    {ongoingSubsidyPrograms
+                      .filter(p => p.status === "closed")
+                      .map((program) => (
+                        <Card key={program.id} className="p-4 border-gray-200">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h3 className="text-lg font-semibold text-foreground">{program.name}</h3>
+                                <Badge variant="secondary">Tertutup</Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground mb-3">{program.description}</p>
+                              
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Luas Lahan</p>
+                                  <p className="font-medium">{program.smartContract.minLandArea}-{program.smartContract.maxLandArea} ha</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Komoditas</p>
+                                  <p className="font-medium">{program.smartContract.allowedCommodities.join(", ")}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Deadline</p>
+                                  <p className="font-medium">{new Date(program.deadline).toLocaleDateString("id-ID")}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Total Pemohon</p>
+                                  <p className="font-medium">{program.totalApplicants.toLocaleString("id-ID")}</p>
+                                </div>
+                              </div>
+                            </div>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleDetailClick(program)}
+                            >
+                              Detail
+                            </Button>
+                          </div>
+                        </Card>
+                      ))}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="riwayat" className="mt-4">
+                  <Card className="p-8 text-center">
+                    <p className="text-muted-foreground">Riwayat Pengajuan</p>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </div>
+            <div className="flex gap-2 pt-4">
+              <Button onClick={() => setShowApplicationHistoryModal(false)} variant="outline" className="w-full">
+                Tutup
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+        <Dialog open={showApplicationHistoryModal} onOpenChange={setShowApplicationHistoryModal}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <div className="space-y-4">
+              <Tabs defaultValue="aktif" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="aktif">Aktif ({ongoingSubsidyPrograms.filter(p => p.status === "active").length})</TabsTrigger>
+                  <TabsTrigger value="tertutup">Tertutup ({ongoingSubsidyPrograms.filter(p => p.status === "closed").length})</TabsTrigger>
+                  <TabsTrigger value="riwayat">Riwayat Pengajuan</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="aktif" className="mt-4">
+                  <div className="space-y-3">
+                    {ongoingSubsidyPrograms
+                      .filter(p => p.status === "active")
+                      .map((program) => {
+                        const eligibility = checkEligibility(program);
+                        return (
+                          <Card key={program.id} className="p-4">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <h3 className="text-lg font-semibold text-foreground">{program.name}</h3>
+                                  <Badge className="bg-emerald-100 text-emerald-800">Aktif</Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground mb-3">{program.description}</p>
+                                
+                                <div className="flex items-center gap-2 mb-3">
+                                  <div className={`px-2 py-1 rounded text-xs font-medium ${
+                                    eligibility.eligible 
+                                      ? "bg-emerald-100 text-emerald-800" 
+                                      : "bg-red-100 text-red-800"
+                                  }`}>
+                                    {eligibility.percentage}% Memenuhi Syarat
+                                  </div>
+                                  {eligibility.eligible && (
+                                    <Badge variant="outline" className="text-xs">Bisa Ajukan</Badge>
+                                  )}
+                                </div>
+
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Luas Lahan</p>
+                                    <p className="font-medium">{program.smartContract.minLandArea}-{program.smartContract.maxLandArea} ha</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Komoditas</p>
+                                    <p className="font-medium">{program.smartContract.allowedCommodities.join(", ")}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Deadline</p>
+                                    <p className="font-medium">{new Date(program.deadline).toLocaleDateString("id-ID")}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Max Subsidi</p>
+                                    <p className="font-medium text-emerald-600">{formatCurrency(program.smartContract.maxSubsidyAmount)}</p>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex flex-col gap-2">
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => handleApplyClick(program)}
+                                  disabled={!eligibility.eligible}
+                                  className="gap-1"
+                                >
+                                  <Plus className="w-4 h-4" />
+                                  Ajukan
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => handleDetailClick(program)}
+                                >
+                                  Detail
+                                </Button>
+                              </div>
+                            </div>
+                          </Card>
+                        );
+                      })}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="tertutup" className="mt-4">
+                  <div className="space-y-3">
+                    {ongoingSubsidyPrograms
+                      .filter(p => p.status === "closed")
+                      .map((program) => (
+                        <Card key={program.id} className="p-4 border-gray-200">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h3 className="text-lg font-semibold text-foreground">{program.name}</h3>
+                                <Badge variant="secondary">Tertutup</Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground mb-3">{program.description}</p>
+                              
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Luas Lahan</p>
+                                  <p className="font-medium">{program.smartContract.minLandArea}-{program.smartContract.maxLandArea} ha</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Komoditas</p>
+                                  <p className="font-medium">{program.smartContract.allowedCommodities.join(", ")}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Deadline</p>
+                                  <p className="font-medium">{new Date(program.deadline).toLocaleDateString("id-ID")}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Total Pemohon</p>
+                                  <p className="font-medium">{program.totalApplicants.toLocaleString("id-ID")}</p>
+                                </div>
+                              </div>
+                            </div>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleDetailClick(program)}
+                            >
+                              Detail
+                            </Button>
+                          </div>
+                        </Card>
+                      ))}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="riwayat" className="mt-4">
+                  <Card className="p-8 text-center">
+                    <p className="text-muted-foreground">Riwayat Pengajuan</p>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </div>
+            <div className="flex gap-2 pt-4">
+              <Button onClick={() => setShowApplicationHistoryModal(false)} variant="outline" className="w-full">
+                Tutup
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+    </div>
+  );
+}

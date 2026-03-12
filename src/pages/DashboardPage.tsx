@@ -1,9 +1,11 @@
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import StatCard from "@/components/StatCard";
-import { provinceData, monthlySubsidyData, commodityDistribution, farmerApplications, fraudAlerts, kurApplications, KURApplication } from "@/data/mockData";
+import { provinceData, monthlySubsidyData, commodityDistribution, farmerApplications, fraudAlerts, marketplaceCommodities, purchaseContracts, productionMonitoring, purchaseHistory, commodityRecommendations, blockchainRecords, fundingProposals } from "@/data/mockData";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, LabelList } from "recharts";
+import { Legend } from "recharts";
 import { Users, Wheat, MapPin, AlertTriangle, TrendingUp, DollarSign, FileText, CheckCircle2, FileCheck2, FileCheck } from "lucide-react";
 import { predictCropRisk, RiskInput } from "@/lib/risk";
+import { getGoodsDistributionFromAmount } from "@/lib/subsidyDistribution";
 import { motion } from "framer-motion";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -83,15 +85,19 @@ export default function DashboardPage() {
 
   // for investor role we render a dedicated investor dashboard
   if (role === "investor") {
-    // Use kurApplications from mockData, aligned with bank dashboard
-    const investorProposals = kurApplications.map((kur) => ({
-      id: kur.id,
-      farmerName: kur.farmerName,
-      komoditas: kur.komoditas,
-      danaDiminta: kur.jumlahPinjaman,
-      estimasiProfit: Math.round(kur.jumlahPinjaman * 0.4), // Estimate 40% profit
-      status: kur.status === "approved" ? "disetujui" : kur.status === "submitted" ? "ditinjau" : "menunggu",
-    }));
+    // Use fundingProposals from mockData
+    const investorProposals = fundingProposals.length > 0 ? fundingProposals.map((proposal) => ({
+      id: proposal.id,
+      farmerName: proposal.farmerName || "Petani",
+      komoditas: proposal.commodity,
+      danaDiminta: proposal.totalFundRequested,
+      estimasiProfit: proposal.projectedProfit,
+      status: proposal.status === "Disetujui investor" ? "disetujui" : proposal.status === "Menunggu review" ? "ditinjau" : "menunggu",
+    })) : [
+      { id: "P001", farmerName: "Ahmad Suryadi", komoditas: "Padi", danaDiminta: 50000000, estimasiProfit: 20000000, status: "disetujui" },
+      { id: "P002", farmerName: "Budi Hartono", komoditas: "Jagung", danaDiminta: 75000000, estimasiProfit: 30000000, status: "ditinjau" },
+      { id: "P003", farmerName: "Dewi Sartika", komoditas: "Jagung", danaDiminta: 35000000, estimasiProfit: 14000000, status: "disetujui" },
+    ];
 
     const investmentByComodity = [
       { name: "Padi", value: 35, fill: "hsl(210, 80%, 25%)" },
@@ -283,14 +289,21 @@ export default function DashboardPage() {
     const totalPetaniTerdaftar = farmerApplications.length;
     const totalPengajuanSubsidi = farmerApplications.length;
     const subsidiBerhasil = farmerApplications.filter((f) => f.status === "approved").length;
-    const totalDanaDisalurkan = subsidiBerhasil * 50000000; // Dummy: Rp 50M per subsidi
+    const totalPupukTon = monthlySubsidyData.reduce((sum, item) => sum + item.pupuk, 0);
+    const totalBenihTon = monthlySubsidyData.reduce((sum, item) => sum + item.benih, 0);
+    const totalAlatUnit = monthlySubsidyData.reduce((sum, item) => sum + item.alat, 0);
+    const totalIrigasiPaket = monthlySubsidyData.reduce((sum, item) => sum + item.irigasi, 0);
+    const totalTunaiPaket = monthlySubsidyData.reduce((sum, item) => sum + item.tunai, 0);
     const fraudDetected = fraudAlerts.length;
     const wilayahRisikoTinggi = provinceData.filter((p) => p.score < 40).length;
 
-    // Data untuk chart penyaluran subsidi per bulan - dari monthlySubsidyData
+    // Data untuk chart penyaluran barang subsidi per bulan
     const subsidyDistribution = monthlySubsidyData.map((item) => ({
       bulan: item.month.substring(0, 3),
-      dana: (item.pupuk + item.benih + item.irigasi + item.alat + item.tunai) * 1000000, // Convert to total amount
+      pupuk: item.pupuk,
+      benih: item.benih,
+      alat: item.alat,
+      irigasi: item.irigasi,
     }));
 
     // Data untuk prediksi risiko per wilayah - dari provinceData
@@ -299,22 +312,25 @@ export default function DashboardPage() {
       risikoGagalPanen: `${Math.max(0, 100 - prov.score)}%`,
     }));
 
-    // Data untuk blockchain transactions - dari kurApplications
-    const blockchainData = kurApplications.slice(0, 4).map((kur, idx) => ({
-      txId: `0x${(idx + 1).toString().padStart(6, "0")}`,
-      petani: kur.farmerName,
-      dana: (kur.jumlahPinjaman / 1000000).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + ".000",
+    // Data untuk blockchain transactions - dari blockchainRecords
+    const blockchainData = blockchainRecords.slice(0, 4).map((tx) => ({
+      txId: tx.txHash,
+      petani: tx.farmer,
+      barang: getGoodsDistributionFromAmount(tx.subsidyType, tx.amount).label,
     }));
 
     // Data untuk notifikasi sistem - dari fraudAlerts dan data kalkulasi
     const duplicateNIKCount = fraudAlerts.filter((f) => f.type === "Duplikasi NIK").length;
     const highRiskCount = provinceData.filter((p) => p.score < 50).length;
-    const budgetUsagePercent = Math.round((totalDanaDisalurkan / 100000000000) * 100); // Asumsi total budget 100B
+    const goodsDistributionPercent = Math.min(
+      100,
+      Math.round(((totalPupukTon + totalBenihTon) / 50000) * 100)
+    );
     
     const systemAlerts = [
       { icon: "⚠️", title: "Duplikasi NIK Terdeteksi", desc: `${duplicateNIKCount} petani dengan NIK ganda ditemukan`, color: "text-red-600" },
       { icon: "🌾", title: "Risiko Gagal Panen Tinggi", desc: `Prediksi gagal panen tinggi di ${highRiskCount} wilayah`, color: "text-orange-600" },
-      { icon: "💰", title: "Anggaran Program Hampir Habis", desc: `${budgetUsagePercent}% anggaran tahun ini sudah disalurkan`, color: "text-yellow-600" },
+      { icon: "📦", title: "Distribusi Barang Subsidi", desc: `${goodsDistributionPercent}% target distribusi pupuk & benih telah tercapai`, color: "text-yellow-600" },
     ];
 
     return (
@@ -350,8 +366,9 @@ export default function DashboardPage() {
             variant="success"
           />
           <StatCard
-            title="Total Dana Disalurkan"
-            value={`Rp ${(totalDanaDisalurkan.toLocaleString("id-ID"))}`}
+            title="Barang Disalurkan"
+            value={`${totalPupukTon.toLocaleString("id-ID")}T Pupuk`}
+            subtitle={`${totalBenihTon.toLocaleString("id-ID")}T Benih • ${totalAlatUnit.toLocaleString("id-ID")} Unit Alat • ${totalIrigasiPaket.toLocaleString("id-ID")} Paket Irigasi • ${totalTunaiPaket.toLocaleString("id-ID")} Paket Bantuan`}
             icon={<DollarSign className="w-5 h-5" />}
             variant="accent"
           />
@@ -378,17 +395,23 @@ export default function DashboardPage() {
             transition={{ delay: 0.1 }}
             className="lg:col-span-2 bg-card rounded-xl p-5 shadow-card"
           >
-            <h3 className="text-sm font-semibold text-foreground mb-4">Grafik Penyaluran Subsidi per Bulan</h3>
+            <h3 className="text-sm font-semibold text-foreground mb-4">Grafik Penyaluran Barang Subsidi per Bulan</h3>
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={subsidyDistribution}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 15%, 88%)" />
                 <XAxis dataKey="bulan" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(value: number | string) => {
-                  const num = typeof value === "string" ? parseInt(value) : value;
-                  return `Rp ${num.toLocaleString("id-ID")}`;
+                <Tooltip formatter={(value: number | string, name: string) => {
+                  const num = typeof value === "string" ? parseFloat(value) : value;
+                  if (name === "alat") return [`${num.toLocaleString("id-ID")} unit`, "Alat"];
+                  if (name === "irigasi") return [`${num.toLocaleString("id-ID")} paket`, "Irigasi"];
+                  return [`${num.toLocaleString("id-ID")} ton`, name === "pupuk" ? "Pupuk" : "Benih"];
                 }} />
-                <Bar dataKey="dana" fill="hsl(210, 80%, 25%)" radius={[6, 6, 0, 0]} />
+                <Legend />
+                <Bar dataKey="pupuk" stackId="a" fill="hsl(210, 80%, 35%)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="benih" stackId="a" fill="hsl(152, 60%, 42%)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="alat" stackId="a" fill="hsl(42, 90%, 55%)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="irigasi" stackId="a" fill="hsl(25, 85%, 55%)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </motion.div>
@@ -513,7 +536,7 @@ export default function DashboardPage() {
                 <tr className="border-b border-border">
                   <th className="text-left py-2 px-3 font-medium text-muted-foreground">Transaction ID</th>
                   <th className="text-left py-2 px-3 font-medium text-muted-foreground">Petani</th>
-                  <th className="text-left py-2 px-3 font-medium text-muted-foreground">Dana</th>
+                  <th className="text-left py-2 px-3 font-medium text-muted-foreground">Barang Disalurkan</th>
                 </tr>
               </thead>
               <tbody>
@@ -521,7 +544,7 @@ export default function DashboardPage() {
                   <tr key={tx.txId} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
                     <td className="py-2.5 px-3 font-mono text-blue-600">{tx.txId}</td>
                     <td className="py-2.5 px-3 font-medium">{tx.petani}</td>
-                    <td className="py-2.5 px-3 text-green-600 font-medium">Rp {tx.dana}</td>
+                    <td className="py-2.5 px-3 text-green-600 font-medium">{tx.barang}</td>
                   </tr>
                 ))}
               </tbody>
@@ -532,170 +555,214 @@ export default function DashboardPage() {
     );
   }
 
-  // for bank role we render a dedicated KUR receipt dashboard
-  if (role === "bank") {
-    // compute simple stats
-    const totalApps = kurApplications.length;
-    const approved = kurApplications.filter((a) => a.status === "approved").length;
-    const rejected = kurApplications.filter((a) => a.status === "rejected").length;
-    const menunggu = kurApplications.filter((a) => a.status === "submitted").length;
-  const totalLoan = kurApplications.reduce((s, a) => s + (a.jumlahPinjaman || 0), 0);
-
-    // compute risk predictions for each commodity from farmerApplications
-    const predictions = farmerApplications.map((f) => {
-      const input: RiskInput = {
-        soilType: "",
-        soilPH: 0,
-        moisture: 0,
-        historicalRain: 0,
-        predictedTemp3m: 0,
-        cropType: f.commodity,
-        area: f.area,
-      };
-      return { commodity: f.commodity, score: predictCropRisk(input).riskScore };
-    });
-    const avgRiskByCommodity: Record<string, number> = {};
-    const countsByCommodity: Record<string, number> = {};
-    predictions.forEach((p) => {
-      avgRiskByCommodity[p.commodity] = (avgRiskByCommodity[p.commodity] || 0) + p.score;
-      countsByCommodity[p.commodity] = (countsByCommodity[p.commodity] || 0) + 1;
-    });
-    Object.keys(avgRiskByCommodity).forEach((c) => {
-      avgRiskByCommodity[c] = Math.round(avgRiskByCommodity[c] / countsByCommodity[c]);
-    });
-
-    // Prepare bar chart data sorted by score (desc) and color palette
-    const barData = Object.entries(avgRiskByCommodity).map(([commodity, score]) => ({ commodity, score })).sort((a, b) => b.score - a.score);
-    const palette = ["#60A5FA", "#F97316", "#F59E0B", "#34D399", "#FB7185", "#A78BFA"];
+  // for standby_buyer role we render a marketplace dashboard
+  if (role === "standby_buyer") {
+    // Statistik untuk Standby Buyer
+    const totalCommodities = marketplaceCommodities.length;
+    const activeContracts = purchaseContracts.filter((c) => c.status === "Berjalan").length;
+    const totalEstimatedHarvest = marketplaceCommodities.reduce((sum, com) => {
+      const harvestQty = parseInt(com.estimatedHarvest.split(" ")[0]);
+      return sum + harvestQty * 1000; // Convert ton to kg
+    }, 0);
+    const totalPurchaseHistory = purchaseHistory.reduce((sum, h) => sum + h.total, 0);
 
     return (
       <div className="p-6 space-y-6">
+        {/* Header */}
         <div>
           <h1 className="text-2xl font-bold font-display text-foreground">
-            Bank KUR Dashboard
+            Dashboard Standby Buyer
           </h1>
           <p className="text-sm text-muted-foreground">
-            Monitoring dan analisis pengajuan kredit usaha rakyat sektor pertanian
+            Marketplace dan monitoring kontrak pembelian hasil pertanian
           </p>
         </div>
 
+        {/* STATISTIK - 4 Cards */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
         >
           <StatCard
-            title="Total Pengajuan"
-            value={totalApps}
-            icon={<FileText className="w-5 h-5" />}
+            title="Total Komoditas Tersedia"
+            value={totalCommodities}
+            icon={<Wheat className="w-5 h-5" />}
             variant="primary"
           />
           <StatCard
-          title="Menunggu Verifikasi"
-          value={menunggu}
-          icon={<FileCheck className="w-5 h-5" />}
-          variant="warning"
-          />
-          <StatCard
-            title="Disetujui"
-            value={approved}
-            icon={<CheckCircle2 className="w-5 h-5" />}
+            title="Kontrak Aktif"
+            value={activeContracts}
+            icon={<FileCheck className="w-5 h-5" />}
             variant="success"
           />
           <StatCard
-            title="Ditolak"
-            value={rejected}
-            icon={<CheckCircle2 className="w-5 h-5" />}
-            variant="destructive"
-          />
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-4"
-        >
-          <StatCard
-            title="Total Dana Pinjaman"
-            value={`Rp ${totalLoan.toLocaleString("id-ID")}`}
-            icon={<DollarSign className="w-5 h-5" />}
+            title="Estimasi Total Panen"
+            value={`${(totalEstimatedHarvest / 1000).toFixed(0)}K Kg`}
+            icon={<TrendingUp className="w-5 h-5" />}
             variant="accent"
           />
+          <StatCard
+            title="Riwayat Pembelian"
+            value={`Rp ${(totalPurchaseHistory / 1e9).toFixed(1)}M`}
+            icon={<DollarSign className="w-5 h-5" />}
+            variant="primary"
+          />
         </motion.div>
 
+        {/* PREVIEW MARKETPLACE - Tabel Kecil */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-card rounded-xl p-4 shadow-card"
-        >
-          <h3 className="text-sm font-semibold text-foreground mb-3">Risiko Rata-rata per Komoditas</h3>
-          {barData.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Tidak ada data komoditas.</p>
-          ) : (
-            <div style={{ width: "100%", height: 260 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barData} margin={{ top: 20, right: 12, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 15%, 88%)" />
-                  <XAxis dataKey="commodity" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} />
-                  <Tooltip formatter={(value: number) => `${value}`} />
-                  <Bar dataKey="score" radius={[6, 6, 0, 0]}>
-                    {barData.map((entry, idx) => (
-                      <Cell key={`cell-${idx}`} fill={palette[idx % palette.length]} />
-                    ))}
-                    <LabelList dataKey="score" position="top" />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.1 }}
           className="bg-card rounded-xl p-5 shadow-card overflow-x-auto"
         >
-          <h3 className="text-sm font-semibold text-foreground mb-4">Detail Pengajuan KUR</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-4">Preview Marketplace</h3>
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left py-2 px-3 font-medium text-muted-foreground">ID</th>
-                <th className="text-left py-2 px-3 font-medium text-muted-foreground">Nama Petani</th>
-                <th className="text-left py-2 px-3 font-medium text-muted-foreground">Alamat</th>
+                <th className="text-left py-2 px-3 font-medium text-muted-foreground">Petani</th>
                 <th className="text-left py-2 px-3 font-medium text-muted-foreground">Komoditas</th>
-                <th className="text-right py-2 px-3 font-medium text-muted-foreground">Jumlah Pinjaman</th>
-                <th className="text-left py-2 px-3 font-medium text-muted-foreground">Status</th>
+                <th className="text-left py-2 px-3 font-medium text-muted-foreground">Estimasi Panen</th>
+                <th className="text-left py-2 px-3 font-medium text-muted-foreground">Lokasi</th>
+                <th className="text-right py-2 px-3 font-medium text-muted-foreground">Harga/Kg</th>
               </tr>
             </thead>
             <tbody>
-              {kurApplications.map((app) => (
-                <tr key={app.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
-                  <td className="py-2.5 px-3 font-mono">{app.id}</td>
-                  <td className="py-2.5 px-3 font-medium">{app.farmerName}</td>
-                  <td className="py-2.5 px-3 text-xs">
-                    {farmerApplications.find((f) => f.id === app.farmerId)?.address || "-"}
-                  </td>
-                  <td className="py-2.5 px-3">{app.komoditas}</td>
-                  <td className="py-2.5 px-3 text-right">Rp {app.jumlahPinjaman.toLocaleString("id-ID")}</td>
-                  <td className="py-2.5 px-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] ${
-                      app.status === "approved"
-                        ? "bg-success/10 text-success"
-                        : app.status === "rejected"
-                        ? "bg-destructive/10 text-destructive"
-                        : app.status === "disbursed"
-                        ? "bg-primary/10 text-primary"
-                        : "bg-warning/10 text-warning"
-                    }`}>{
-                      app.status === "submitted" ? "Menunggu" : app.status === "disbursed" ? "Dana Cair" : app.status === "approved" ? "Disetujui" : "Ditolak"
-                    }</span>
+              {marketplaceCommodities.map((item) => (
+                <tr key={item.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
+                  <td className="py-2.5 px-3 font-medium">{item.farmerName}</td>
+                  <td className="py-2.5 px-3">{item.commodity}</td>
+                  <td className="py-2.5 px-3">{item.estimatedHarvest}</td>
+                  <td className="py-2.5 px-3">{item.location}</td>
+                  <td className="py-2.5 px-3 text-right">Rp {item.estimatedPrice.toLocaleString("id-ID")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </motion.div>
+
+        {/* KONTRAK AKTIF */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-card rounded-xl p-5 shadow-card overflow-x-auto"
+        >
+          <h3 className="text-sm font-semibold text-foreground mb-4">Kontrak Aktif</h3>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left py-2 px-3 font-medium text-muted-foreground">ID Kontrak</th>
+                <th className="text-left py-2 px-3 font-medium text-muted-foreground">Petani</th>
+                <th className="text-left py-2 px-3 font-medium text-muted-foreground">Komoditas</th>
+                <th className="text-right py-2 px-3 font-medium text-muted-foreground">Jumlah</th>
+                <th className="text-right py-2 px-3 font-medium text-muted-foreground">Total Nilai</th>
+                <th className="text-center py-2 px-3 font-medium text-muted-foreground">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {purchaseContracts.map((contract) => (
+                <tr key={contract.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
+                  <td className="py-2.5 px-3 font-mono text-blue-600">{contract.id}</td>
+                  <td className="py-2.5 px-3 font-medium">{contract.farmer}</td>
+                  <td className="py-2.5 px-3">{contract.commodity}</td>
+                  <td className="py-2.5 px-3 text-right">{contract.quantity}</td>
+                  <td className="py-2.5 px-3 text-right font-semibold text-green-600">Rp {contract.totalValue.toLocaleString("id-ID")}</td>
+                  <td className="py-2.5 px-3 text-center">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                      contract.status === "Berjalan"
+                        ? "bg-blue-100 text-blue-800"
+                        : contract.status === "Pending"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-green-100 text-green-800"
+                    }`}>
+                      {contract.status}
+                    </span>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </motion.div>
+
+        {/* MONITORING PRODUKSI */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-card rounded-xl p-5 shadow-card overflow-x-auto"
+        >
+          <h3 className="text-sm font-semibold text-foreground mb-4">Monitoring Produksi</h3>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left py-2 px-3 font-medium text-muted-foreground">Petani</th>
+                <th className="text-left py-2 px-3 font-medium text-muted-foreground">Komoditas</th>
+                <th className="text-left py-2 px-3 font-medium text-muted-foreground">Luas Lahan</th>
+                <th className="text-left py-2 px-3 font-medium text-muted-foreground">Tahap Pertumbuhan</th>
+                <th className="text-left py-2 px-3 font-medium text-muted-foreground">Estimasi Panen</th>
+                <th className="text-center py-2 px-3 font-medium text-muted-foreground">Risiko</th>
+              </tr>
+            </thead>
+            <tbody>
+              {productionMonitoring.map((prod) => (
+                <tr key={prod.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
+                  <td className="py-2.5 px-3 font-medium">{prod.farmer}</td>
+                  <td className="py-2.5 px-3">{prod.commodity}</td>
+                  <td className="py-2.5 px-3">{prod.landArea}</td>
+                  <td className="py-2.5 px-3">{prod.growthStage}</td>
+                  <td className="py-2.5 px-3">{prod.estimatedHarvest}</td>
+                  <td className="py-2.5 px-3 text-center">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                      prod.riskLevel === "Rendah"
+                        ? "bg-green-100 text-green-800"
+                        : prod.riskLevel === "Sedang"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-red-100 text-red-800"
+                    }`}>
+                      {prod.riskLevel}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </motion.div>
+
+        {/* REKOMENDASI KOMODITAS */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="grid grid-cols-1 md:grid-cols-2 gap-4"
+        >
+          {commodityRecommendations.map((rec, idx) => (
+            <div
+              key={idx}
+              className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-5 shadow-card border border-blue-200"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className="font-semibold text-foreground text-sm">{rec.commodity}</h3>
+                  <p className="text-xs text-muted-foreground">Rekomendasi Komoditas</p>
+                </div>
+                <span className="px-2 py-1 bg-green-100 text-green-800 text-[10px] font-bold rounded-full">
+                  {rec.demandLevel}
+                </span>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground">Harga Rata-rata</span>
+                  <span className="font-semibold text-foreground">Rp {rec.averagePrice.toLocaleString("id-ID")}/Kg</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground">Wilayah Potensial</span>
+                  <span className="font-semibold text-foreground">{rec.potentialRegion}</span>
+                </div>
+              </div>
+            </div>
+          ))}
         </motion.div>
       </div>
     );

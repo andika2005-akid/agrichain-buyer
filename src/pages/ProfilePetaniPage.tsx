@@ -4,10 +4,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
 import { Upload, Lock, Wheat, MapPin, Ruler, Award, DollarSign, FileText } from "lucide-react";
-import { farmerApplications, plantingRecords, harvestRecords, kurApplications } from "@/data/mockData";
+import { farmerApplications, plantingRecords, harvestRecords } from "@/data/mockData";
 
 // Mock farmer data
 const initialProfile = {
@@ -96,9 +96,7 @@ export default function FarmerProfilePage() {
   // Get stats from mock data
   const farmerData = farmerApplications.find(f => f.id === profile.id);
   const farmerHarvests = harvestRecords.filter(h => h.farmerId === profile.id);
-  const farmerKUR = kurApplications.filter(k => k.farmerId === profile.id);
   const totalHarvest = farmerHarvests.reduce((sum, h) => sum + (h.totalHasilPanen || 0), 0);
-  const totalKUR = farmerKUR.length;
 
   return (
     <div className="p-8 space-y-6 w-full max-w-6xl mx-auto">
@@ -447,7 +445,7 @@ export default function FarmerProfilePage() {
           <Card className="p-4 text-center">
             <FileText className="w-6 h-6 text-primary mx-auto mb-2" />
             <p className="text-xs text-muted-foreground mb-1">Total Pengajuan KUR</p>
-            <p className="text-2xl font-bold">{totalKUR}</p>
+            <p className="text-2xl font-bold">0</p>
             <p className="text-xs text-muted-foreground">pengajuan</p>
           </Card>
           <Card className="p-4 text-center">

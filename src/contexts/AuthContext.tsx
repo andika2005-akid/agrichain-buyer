@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 
-export type UserRole = "petani" | "investor" | "bank" | "kementerian";
+export type UserRole = "petani" | "investor" | "standby_buyer" | "kementerian";
 
 interface AuthContextType {
   role: UserRole;
@@ -13,10 +13,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+export { AuthContext };
+
 const roleNames: Record<UserRole, string> = {
   petani: "Ahmad Suryadi (Petani)",
   investor: "Budi Wijaya (Investor)",
-  bank: "Ir. Bambang Kusuma (Bank)",
+  standby_buyer: "Ir. Bambang Kusuma (Standby Buyer)",
   kementerian: "Dr. Siti Rahayu (Kementerian Pertanian)",
 };
 
@@ -35,10 +37,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
-  return ctx;
 }

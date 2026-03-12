@@ -2,7 +2,7 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import AppSidebar from "./AppSidebar";
 import ErrorBoundary from "./ErrorBoundary";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { Menu, LogOut, Wheat } from "lucide-react";
 
 export default function DashboardLayout() {
@@ -13,7 +13,7 @@ export default function DashboardLayout() {
   const roleLabels: Record<string, string> = {
     petani: "Petani",
     investor: "Investor",
-    bank: "Bank",
+    standby_buyer: "Standby Buyer",
     kementerian: "Kementerian Pertanian",
   };
 
@@ -27,7 +27,7 @@ export default function DashboardLayout() {
             <Wheat className="w-5 h-5 text-accent-foreground" />
           </div>
           <div className="hidden sm:block">
-            <h1 className="text-sm font-bold text-foreground">TABA</h1>
+            <h1 className="text-sm font-bold text-foreground">TaniLink</h1>
             <p className="text-[10px] text-muted-foreground leading-tight">Sistem & Subsidi</p>
           </div>
           

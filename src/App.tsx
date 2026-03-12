@@ -3,14 +3,14 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import LoginPage from "@/pages/LoginPage";
 import DashboardPage from "@/pages/DashboardPage";
 import PetaPotensiPage from "@/pages/PetaPotensiPage";
 import RegistrasiPage from "@/pages/RegistrasiPage";
 import DaftarTanamPanenPage from "@/pages/DaftarTanamPanenPage";
-import PengajuanSubsidiPage from "@/pages/PengajuanSubsidiPage";
 import ScoringPage from "@/pages/ScoringPage";
 import BlockchainPage from "@/pages/BlockchainPage";
 import FraudDetectionPage from "@/pages/FraudDetectionPage";
@@ -19,24 +19,27 @@ import NotFound from "@/pages/NotFound";
 import RekomendasiKomoditasPage from "@/pages/RekomendasiKomoditasPage";
 import PengajuanKURPage from "@/pages/PengajuanKURPage";
 import ProfilePetaniPage from "@/pages/ProfilePetaniPage";
-import BankMonitoringPembiayaanPage from "@/pages/BankMonitoringPembiayaanPage";
 import PengajuanProposalPage from "@/pages/PengajuanProposalPage";
 import DaftarInvestorProposalsPage from "@/pages/DaftarInvestorProposalsPage";
 import AnalisisProposalPage from "@/pages/AnalisisProposalPage";
+import PengajuanBuyerPage from "@/pages/PengajuanBuyerPage";
 import RiwayatInvestasiPage from "@/pages/RiwayatInvestasiPage";
 import InvestorPortfolioPage from "@/pages/InvestorPortfolioPage";
-import BankKelayakanPage from "@/pages/BankKelayakanPage";
-import KementerianMonitoringPage from "@/pages/KementerianMonitoringPage";
-import BankKURAnalysisPage from "@/pages/BankKURAnalysisPage";
-import BankRiskPredictionPage from "@/pages/BankRiskPredictionPage";
 import KementerianRiskPredictionPage from "@/pages/KementerianRiskPredictionPage";
 import ProgramSubsidiPage from "@/pages/ProgramSubsidiPage";
-import ProgramControlPage from "@/pages/ProgramControlPage";
+import MarketplaceHasilPanenPage from "@/pages/MarketplaceHasilPanenPage";
+import PetaniAjukanJualPage from "@/pages/PetaniAjukanJualPage";
+import KontrakPembelianPage from "@/pages/KontrakPembelianPage";
+import MonitoringProduksiPage from "@/pages/MonitoringProduksiPage";
+import MonitoringProyekPage from "@/pages/MonitoringProyekPage";
+import RiwayatPembelianPage from "@/pages/RiwayatPembelianPage";
+import BuyerRekomendasiKomoditasPage from "@/pages/BuyerRekomendasiKomoditasPage";
 
 const queryClient = new QueryClient();
 
 function AppRoutes() {
-  const { isLoggedIn } = useAuth();
+    {/* MonitoringProyekPage removed, now integrated in proposal detail */}
+  const { isLoggedIn, role } = useAuth();
 
   if (!isLoggedIn) {
     return (
@@ -46,19 +49,37 @@ function AppRoutes() {
     );
   }
 
+  // Redirect ke menu paling atas berdasarkan role
+  const getFirstMenuPath = (userRole: string) => {
+    switch (userRole) {
+      case "petani":
+        return "/profile"; // Profil Petani - menu pertama
+      case "investor":
+        return "/daftar-proposals"; // Daftar Proposal - menu pertama (skip Dashboard)
+      case "standby_buyer":
+        return "/marketplace"; // Marketplace - menu pertama (skip Dashboard)
+      case "kementerian":
+        return "/peta-potensi"; // Peta Potensi - menu pertama (skip Dashboard)
+      default:
+        return "/dashboard";
+    }
+  };
+
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<Navigate to={getFirstMenuPath(role)} replace />} />
       <Route element={<DashboardLayout />}>
+          <Route path="/monitoring-proyek" element={<MonitoringProyekPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         {/* Role PETANI */}
         <Route path="/profile" element={<ProfilePetaniPage />} />
         <Route path="/catatan-pertanian" element={<DaftarTanamPanenPage />} />
         <Route path="/program-subsidi" element={<ProgramSubsidiPage />} />
-        <Route path="/pengajuan-subsidi" element={<PengajuanSubsidiPage />} />
         <Route path="/pengajuan-KUR" element={<PengajuanKURPage />} />
         <Route path="/pengajuan-proposal" element={<PengajuanProposalPage />} />
         <Route path="/rekomendasi-komoditas" element={<RekomendasiKomoditasPage />} />
+        <Route path="/pengajuan-buyer" element={<PengajuanBuyerPage />} />
+        <Route path="/ajukan-penjualan" element={<PetaniAjukanJualPage />} />
 
         {/* Role INVESTOR */}
         <Route path="/daftar-proposals" element={<DaftarInvestorProposalsPage />} />
@@ -66,19 +87,19 @@ function AppRoutes() {
         <Route path="/investor-portfolio" element={<InvestorPortfolioPage />} />
         <Route path="/riwayat-investasi" element={<RiwayatInvestasiPage />} />
 
-        {/* Role BANK */}
-        <Route path="/bank-kur-analysis" element={<BankKURAnalysisPage />} />
-        <Route path="/bank-kelayakan" element={<BankKelayakanPage />} />
-        <Route path="/risk-bank" element={<BankRiskPredictionPage />} />
-        <Route path="/bank-monitoring-pembiayaan" element={<BankMonitoringPembiayaanPage />} />
+        {/* Role STANDBY BUYER */}
+        <Route path="/marketplace" element={<MarketplaceHasilPanenPage />} />
+        <Route path="/kontrak-pembelian" element={<KontrakPembelianPage />} />
+        <Route path="/monitoring-produksi" element={<MonitoringProduksiPage />} />
+          <Route path="/monitoring-produksi" element={<MonitoringProduksiPage />} />
+        <Route path="/riwayat-pembelian" element={<RiwayatPembelianPage />} />
+        <Route path="/rekomendasi-komoditas-pembeli" element={<BuyerRekomendasiKomoditasPage />} />
 
         {/* Role KEMENTAN */}
         <Route path="/peta-potensi" element={<PetaPotensiPage />} />
-        <Route path="/kementerian-monitoring" element={<KementerianMonitoringPage />} />
         <Route path="/fraud" element={<FraudDetectionPage />} />
         <Route path="/blockchain" element={<BlockchainPage />} />
         <Route path="/risk-kementerian" element={<KementerianRiskPredictionPage />} />
-        <Route path="/program-control" element={<ProgramControlPage />} />
 
         
         <Route path="/registrasi" element={<RegistrasiPage />} />

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { useAuth } from "@/contexts/AuthContext";
-import { farmerApplications, plantingRecords, harvestRecords as mockHarvestRecords, provinceData, climateData, commodityIdeals } from "@/data/mockData";
-import { predictCropRisk, RiskInput, RiskResult } from "@/lib/risk";
+import { useAuth } from "@/hooks/useAuth";
+import { farmerApplications, plantingRecords, harvestRecords as mockHarvestRecords, provinceData } from "@/data/mockData";
+import { predictCropRisk, type RiskInput, type RiskResult } from "@/lib/risk";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ export default function RiskPredictionPage() {
   const [selectedFarmerId, setSelectedFarmerId] = useState<string | null>(null);
 
   // run prediction for each farmer record
-  const predictions = farmerApplications.map((f) => {
+  const predictions = farmerApplications.map((f: typeof farmerApplications[0]) => {
     const farmer = f as typeof farmerApplications[0] & {
       soilType?: string;
       soilPH?: number;
@@ -35,7 +35,7 @@ export default function RiskPredictionPage() {
   });
 
   const selectedPrediction = selectedFarmerId
-    ? predictions.find((p) => p.farmer.id === selectedFarmerId)
+    ? predictions.find((p: any) => p.farmer.id === selectedFarmerId)
     : predictions[0];
 
   const selectedFarmer = selectedPrediction?.farmer;
@@ -43,16 +43,16 @@ export default function RiskPredictionPage() {
 
   // Get planting and harvest records for selected farmer
   const farmerPlanting = selectedFarmer
-    ? plantingRecords?.filter((p) => p.farmerId === selectedFarmer.id) || []
+    ? plantingRecords?.filter((p: any) => p.farmerId === selectedFarmer.id) || []
     : [];
 
   const farmerHarvests = selectedFarmer
-    ? mockHarvestRecords?.filter((h) => h.farmerId === selectedFarmer.id) || []
+    ? mockHarvestRecords?.filter((h: any) => h.farmerId === selectedFarmer.id) || []
     : [];
 
   // Combine planting and harvest data for history table
-  const farmingHistory = farmerPlanting.map((p) => {
-    const harvest = farmerHarvests.find((h) => h.komoditas === p.komoditas);
+  const farmingHistory = farmerPlanting.map((p: any) => {
+    const harvest = farmerHarvests.find((h: any) => h.komoditas === p.komoditas);
     return {
       tahun: new Date(p.tanggalTanam).getFullYear(),
       komoditas: p.komoditas,
@@ -108,11 +108,11 @@ export default function RiskPredictionPage() {
       </div>
 
       {/* Selector untuk petani */}
-      {(role === "bank" || role === "investor" || role === "kementerian") && (
+      {(role === "standby_buyer" || role === "investor" || role === "kementerian") && (
         <Card className="p-4">
           <h3 className="text-sm font-semibold mb-3">Pilih Petani untuk Analisis</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {predictions.map(({ farmer }) => (
+            {predictions.map(({ farmer }: any) => (
               <button
                 key={farmer.id}
                 onClick={() => setSelectedFarmerId(farmer.id)}
@@ -190,7 +190,7 @@ export default function RiskPredictionPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {farmingHistory.map((item, idx) => (
+                    {farmingHistory.map((item: any, idx: number) => (
                       <tr key={idx} className="border-b hover:bg-muted/50">
                         <td className="p-3">{item.tahun}</td>
                         <td className="p-3 font-semibold">{item.komoditas}</td>
@@ -301,7 +301,7 @@ export default function RiskPredictionPage() {
             <div className="mt-4">
               <p className="text-sm font-semibold mb-2">Rekomendasi Detail:</p>
               <ul className="space-y-2 text-sm">
-                {riskResult.recommendations.map((rec, idx) => (
+                {riskResult.recommendations.map((rec: string, idx: number) => (
                   <li key={idx} className="flex items-start gap-2">
                     <span className="text-accent">✓</span>
                     <span>{rec}</span>

@@ -1,12 +1,13 @@
 import { motion } from "framer-motion";
-import { useAuth, UserRole } from "@/contexts/AuthContext";
-import { Wheat, Building2, Landmark, TrendingUp, Shield } from "lucide-react";
+import { UserRole } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
+import { Wheat, Building2, Landmark, TrendingUp, ShoppingCart } from "lucide-react";
 import { useState } from "react";
 
 const roles: { role: UserRole; label: string; icon: React.ElementType; desc: string }[] = [
   { role: "petani", label: "Petani", icon: Wheat, desc: "Ajukan proposal & tanam" },
   { role: "investor", label: "Investor", icon: TrendingUp, desc: "Analisis & danai proyek" },
-  { role: "bank", label: "Bank", icon: Building2, desc: "Verifikasi kelayakan" },
+  { role: "standby_buyer", label: "Standby Buyer", icon: ShoppingCart, desc: "Verifikasi kelayakan" },
   { role: "kementerian", label: "Kementerian", icon: Landmark, desc: "Monitor & audit" },
 ];
 
@@ -33,8 +34,8 @@ export default function LoginPage() {
       }
 
       login(selectedRole);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
     } finally {
       setLoading(false);
     }
@@ -49,16 +50,16 @@ export default function LoginPage() {
       >
         <div className="text-center mb-8">
           <Wheat className="w-12 h-12 mx-auto text-accent mb-3" />
-          <h1 className="text-3xl font-bold text-primary-foreground">
-            TABA Platform
+          <h1 className="text-3xl font-bold text-black">
+            TaniLink
           </h1>
-          <p className="text-sm text-primary-foreground/70 mt-1">Sistem Pertanian & Subsidi Terintegrasi</p>
+          <p className="text-sm text-black mt-1">Menghubungkan Petani dan Industri</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Role Selector */}
           <div>
-            <label className="text-xs font-semibold text-primary-foreground/80 mb-3 block">Pilih Peran Anda:</label>
+            <label className="text-xs font-semibold text-black/80 mb-3 block">Pilih Peran Anda:</label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {roles.map((r) => {
                 const Icon = r.icon;

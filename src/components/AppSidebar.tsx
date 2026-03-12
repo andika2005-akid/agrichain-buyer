@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
-import { useAuth, UserRole } from "@/contexts/AuthContext";
+import { UserRole } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import {
   LayoutDashboard,
   Users,
@@ -38,11 +39,11 @@ const navItems: NavItem[] = [
   // Petani
   { label: "Profil Petani", path: "/profile", icon: Users, roles: ["petani"] },
   { label: "Catatan Pertanian", path: "/catatan-pertanian", icon: BookOpen, roles: ["petani"] },
-  { label: "Program Subsidi", path: "/program-subsidi", icon: Wheat, roles: ["petani"] },
-  { label: "Pengajuan Subsidi", path: "/pengajuan-subsidi", icon: FileText, roles: ["petani"] },
-  { label: "Pengajuan KUR", path: "/pengajuan-KUR", icon: PiggyBank, roles: ["petani"] },
+  { label: "Pengajuan Subsidi", path: "/program-subsidi", icon: Wheat, roles: ["petani"] },
   { label: "Proposal Pendanaan", path: "/pengajuan-proposal", icon: Briefcase, roles: ["petani"] },
   { label: "Rekomendasi Komoditas", path: "/rekomendasi-komoditas", icon: Sprout, roles: ["petani"] },
+  { label: "Pengajuan Buyer", path: "/pengajuan-buyer", icon: DollarSign, roles: ["petani"] },
+  { label: "Monitoring Proyek Pertanian 🌾", path: "/monitoring-proyek", icon: Leaf, roles: ["petani"] },
   
   // Investor
   { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard, roles: ["investor"] },
@@ -51,29 +52,22 @@ const navItems: NavItem[] = [
   { label: "Portofolio Investasi", path: "/investor-portfolio", icon: TrendingUp, roles: ["investor"] },
   { label: "Riwayat Investasi", path: "/riwayat-investasi", icon: HistoryIcon, roles: ["investor"] },
   
-  // Bank
-  { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard, roles: ["bank"] },
-  { label: "Pengajuan KUR", path: "/bank-kur-analysis", icon: DollarSign, roles: ["bank"] },
-  { label: "Analisis Kelayakan", path: "/bank-kelayakan", icon: CheckCircle2, roles: ["bank"] },
-  { label: "Prediksi Risiko", path: "/risk-bank", icon: TrendingDown, roles: ["bank"] },
-  { label: "Monitoring Pembiayaan", path: "/bank-monitoring-pembiayaan", icon: BarChart3, roles: ["bank"] },
+  // Standby Buyer
+  { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard, roles: ["standby_buyer"] },
+  { label: "Marketplace", path: "/marketplace", icon: DollarSign, roles: ["standby_buyer"] },
+  { label: "Kontrak Pembelian", path: "/kontrak-pembelian", icon: FileCheck, roles: ["standby_buyer"] },
+  { label: "Monitoring Produksi", path: "/monitoring-produksi", icon: Leaf, roles: ["standby_buyer"] },
+  { label: "Riwayat Pembelian", path: "/riwayat-pembelian", icon: HistoryIcon, roles: ["standby_buyer"] },
   
   // Kementerian
   { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard, roles: ["kementerian"] },
   { label: "Peta Potensi", path: "/peta-potensi", icon: Map, roles: ["kementerian"] },
-  { label: "Monitoring Subsidi", path: "/kementerian-monitoring", icon: Shield, roles: ["kementerian"] },
+  { label: "Program Subsidi", path: "/program-subsidi", icon: Wheat, roles: ["kementerian"] },
   { label: "Deteksi Fraud", path: "/fraud", icon: AlertTriangle, roles: ["kementerian"] },
   { label: "Blockchain Audit", path: "/blockchain", icon: Link2, roles: ["kementerian"] },
   { label: "Prediksi Risiko", path: "/risk-kementerian", icon: TrendingDown, roles: ["kementerian"] },
-  { label: "Kontrol Program", path: "/program-control", icon: Settings, roles: ["kementerian"] },
+  // Monitoring Proyek Pertanian removed, now integrated in proposal detail
 ];
-
-const roleLabels: Record<UserRole, string> = {
-  petani: "Petani",
-  investor: "Investor",
-  bank: "Bank",
-  kementerian: "Kementerian Pertanian",
-};
 
 interface AppSidebarProps {
   collapsed?: boolean;

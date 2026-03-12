@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { kurApplications } from "@/data/mockData";
+import { fundingProposals } from "@/data/mockData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -53,18 +53,34 @@ interface Investment {
 }
 
 export default function InvestorPortfolioPage() {
-  // Transform kurApplications to investment format
-  const baseInvestments: Investment[] = kurApplications.map((kur, idx) => ({
-    id: kur.id,
-    namaPetani: kur.farmerName,
-    komoditas: kur.komoditas,
-    danaInvestasi: kur.jumlahPinjaman,
-    estimasiProfit: Math.round(kur.jumlahPinjaman * 0.4),
-    status: idx === 0 ? "berjalan" : idx === 1 ? "panen" : "berjalan",
-    luasLahan: kur.tenor / 12,
-    estimasiPanen: "2024-06-15",
-    progressTanaman: idx === 0 ? 70 : idx === 1 ? 90 : 50,
-  }));
+  // Mock data fallback jika fundingProposals kosong
+  const mockProposalsData = fundingProposals.length > 0 ? fundingProposals : [
+    { id: "PROP001", farmer: "Andi Pratama", commodity: "Padi", requestedAmount: 50000000, landArea: 2, harvestDate: "2026-06-15" },
+    { id: "PROP002", farmer: "Budi Santoso", commodity: "Jagung", requestedAmount: 35000000, landArea: 1.5, harvestDate: "2026-07-20" },
+    { id: "PROP003", farmer: "Siti Nurhaliza", commodity: "Cabai", requestedAmount: 45000000, landArea: 1.8, harvestDate: "2026-08-10" },
+  ];
+
+  // Transform fundingProposals to investment format
+  const baseInvestments: Investment[] = (mockProposalsData as unknown as Array<any>).map((proposal, idx) => {
+    // Support both demo and real fundingProposals shape
+    const namaPetani = proposal.farmerName || proposal.farmer || "Petani"
+    const danaInvestasi = proposal.totalFundRequested ?? proposal.requestedAmount ?? 0
+    const estimasiProfit = proposal.projectedProfit ?? Math.round(danaInvestasi * 0.4)
+    const komoditas = proposal.commodity || proposal.commodityType || proposal.commodityName || "N/A"
+    const luasLahan = proposal.areaHa ?? proposal.landArea ?? proposal.luasLahan ?? 2
+    const estimasiPanen = proposal.harvestPeriod ?? proposal.harvestDate ?? "2026-06-15"
+    return {
+      id: proposal.id,
+      namaPetani,
+      komoditas,
+      danaInvestasi,
+      estimasiProfit,
+      status: idx === 0 ? "berjalan" : idx === 1 ? "panen" : "berjalan",
+      luasLahan,
+      estimasiPanen,
+      progressTanaman: idx === 0 ? 70 : idx === 1 ? 90 : 50,
+    }
+  });
 
   // State
   const [selectedInvestment, setSelectedInvestment] =
