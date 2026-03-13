@@ -43,7 +43,8 @@ const navItems: NavItem[] = [
   { label: "Proposal Pendanaan", path: "/pengajuan-proposal", icon: Briefcase, roles: ["petani"] },
   { label: "Rekomendasi Komoditas", path: "/rekomendasi-komoditas", icon: Sprout, roles: ["petani"] },
   { label: "Pengajuan Buyer", path: "/pengajuan-buyer", icon: DollarSign, roles: ["petani"] },
-  { label: "Monitoring Proyek Pertanian 🌾", path: "/monitoring-proyek", icon: Leaf, roles: ["petani"] },
+  { label: "Daftar Buyer Kontrak", path: "/daftar-buyer-kontrak", icon: CheckCircle2, roles: ["petani"] },
+  { label: "Monitoring Proyek Pertanian", path: "/monitoring-proyek", icon: Leaf, roles: ["petani"] },
   
   // Investor
   { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard, roles: ["investor"] },

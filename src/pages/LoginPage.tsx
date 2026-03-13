@@ -1,18 +1,20 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { UserRole } from "@/contexts/AuthContext";
 import { useAuth } from "@/hooks/useAuth";
 import { Wheat, Building2, Landmark, TrendingUp, ShoppingCart } from "lucide-react";
 import { useState } from "react";
 
 const roles: { role: UserRole; label: string; icon: React.ElementType; desc: string }[] = [
-  { role: "petani", label: "Petani", icon: Wheat, desc: "Ajukan proposal & tanam" },
-  { role: "investor", label: "Investor", icon: TrendingUp, desc: "Analisis & danai proyek" },
-  { role: "standby_buyer", label: "Standby Buyer", icon: ShoppingCart, desc: "Verifikasi kelayakan" },
-  { role: "kementerian", label: "Kementerian", icon: Landmark, desc: "Monitor & audit" },
+  { role: "petani", label: "Petani", icon: Wheat, desc: "Tanam & Ajukan proposal" },
+  { role: "investor", label: "Investor", icon: TrendingUp, desc: "Analisis & pendanaan proyek" },
+  { role: "standby_buyer", label: "Standby Buyer", icon: ShoppingCart, desc: "Kontrak pembelian hasil panen" },
+  { role: "kementerian", label: "Kementerian", icon: Landmark, desc: "Monitoring & audit sistem" },
 ];
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const navigate = useNavigate();
 
   const [selectedRole, setSelectedRole] = useState<UserRole>("petani");
   const [email, setEmail] = useState("");
@@ -34,6 +36,8 @@ export default function LoginPage() {
       }
 
       login(selectedRole);
+      // Navigate ke home page, yang akan redirect berdasarkan role
+      navigate("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan");
     } finally {
@@ -49,10 +53,7 @@ export default function LoginPage() {
         className="w-full max-w-2xl glass p-8 rounded-2xl"
       >
         <div className="text-center mb-8">
-          <Wheat className="w-12 h-12 mx-auto text-accent mb-3" />
-          <h1 className="text-3xl font-bold text-black">
-            TaniLink
-          </h1>
+          <img src="/tanilink1.png" alt="TaniLink Logo" className="w-32 h-33 mx-auto mb-2 object-contain" />
           <p className="text-sm text-black mt-1">Menghubungkan Petani dan Industri</p>
         </div>
 

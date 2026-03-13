@@ -1,10 +1,10 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { buyers, purchaseContracts, productionMonitoring } from "@/data/mockData";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-// framer-motion removed to avoid runtime DOM removal issues
 
 type Contract = (typeof purchaseContracts)[number];
 
@@ -32,13 +32,19 @@ export default function PengajuanBuyerPage() {
   }
 
   return (
-    <div className="p-6 space-y-6" style={{ opacity: 1 }}>
-        <h1 className="text-2xl font-bold font-display text-foreground mb-2">
-          Pengajuan dari Buyer
-        </h1>
-        <p className="text-sm text-muted-foreground mb-4">
-          Daftar pengajuan kontrak pembelian dari buyer. Silakan terima atau tolak.
-        </p>
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Pengajuan dari Buyer</h1>
+          <p className="text-sm text-muted-foreground">
+            Daftar pengajuan kontrak pembelian dari buyer. Silakan terima atau tolak.
+          </p>
+        </div>
+      </motion.div>
+
+      {/* Content */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         {!submissions || submissions.length === 0 ? (
           <div className="text-muted-foreground">Tidak ada pengajuan.</div>
         ) : (
@@ -111,6 +117,7 @@ export default function PengajuanBuyerPage() {
             })}
           </div>
         )}
-      </div>
+      </motion.div>
+    </div>
   );
 }

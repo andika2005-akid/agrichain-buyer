@@ -3,7 +3,7 @@ import { useState } from "react";
 import AppSidebar from "./AppSidebar";
 import ErrorBoundary from "./ErrorBoundary";
 import { useAuth } from "@/hooks/useAuth";
-import { Menu, LogOut, Wheat } from "lucide-react";
+import { Menu, LogOut } from "lucide-react";
 
 export default function DashboardLayout() {
   const { logout, userName, role } = useAuth();
@@ -23,12 +23,10 @@ export default function DashboardLayout() {
       <div className="h-16 border-b border-border bg-white shadow-sm flex items-center justify-between px-6">
         {/* Logo + Toggle Button (Left) */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
-            <Wheat className="w-5 h-5 text-accent-foreground" />
-          </div>
+          <img src="/tanilink1.png" alt="TaniLink Logo" className="w-8 h-8 rounded-lg object-contain" />
           <div className="hidden sm:block">
             <h1 className="text-sm font-bold text-foreground">TaniLink</h1>
-            <p className="text-[10px] text-muted-foreground leading-tight">Sistem & Subsidi</p>
+            <p className="text-[10px] text-muted-foreground leading-tight">Petani & Industri</p>
           </div>
           
           {/* Toggle Sidebar Button */}

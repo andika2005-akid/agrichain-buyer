@@ -25,12 +25,20 @@ export default function MonitoringProyekPage() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-      <h1 className="text-2xl font-bold mb-4">Monitoring Proyek Pertanian 🌾</h1>
-      <p className="text-muted-foreground mb-6">
-        Update progres tanam, kondisi tanaman, foto perkembangan, penggunaan dana, dan laporan panen.
-      </p>
-      {approvedProposals.length === 0 ? (
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Monitoring Proyek Pertanian</h1>
+          <p className="text-sm text-muted-foreground">
+            Update progres tanam, kondisi tanaman, foto perkembangan, penggunaan dana, dan laporan panen.
+          </p>
+        </div>
+      </motion.div>
+
+      {/* Content */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        {approvedProposals.length === 0 ? (
         <Card className="p-6 text-center">Belum ada proyek yang disetujui.</Card>
       ) : (
         approvedProposals.map((proposal) => (
@@ -109,6 +117,7 @@ export default function MonitoringProyekPage() {
           </Card>
         ))
       )}
-    </motion.div>
+      </motion.div>
+    </div>
   );
 }

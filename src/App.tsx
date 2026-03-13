@@ -29,6 +29,7 @@ import KementerianRiskPredictionPage from "@/pages/KementerianRiskPredictionPage
 import ProgramSubsidiPage from "@/pages/ProgramSubsidiPage";
 import MarketplaceHasilPanenPage from "@/pages/MarketplaceHasilPanenPage";
 import PetaniAjukanJualPage from "@/pages/PetaniAjukanJualPage";
+import DaftarBuyerKontrakPage from "@/pages/DaftarBuyerKontrakPage";
 import KontrakPembelianPage from "@/pages/KontrakPembelianPage";
 import MonitoringProduksiPage from "@/pages/MonitoringProduksiPage";
 import MonitoringProyekPage from "@/pages/MonitoringProyekPage";
@@ -49,17 +50,17 @@ function AppRoutes() {
     );
   }
 
-  // Redirect ke menu paling atas berdasarkan role
+  // Redirect ke dashboard masing-masing role setelah login
   const getFirstMenuPath = (userRole: string) => {
     switch (userRole) {
       case "petani":
-        return "/profile"; // Profil Petani - menu pertama
+        return "/profile"; // Profil Petani
       case "investor":
-        return "/daftar-proposals"; // Daftar Proposal - menu pertama (skip Dashboard)
+        return "/dashboard"; // Dashboard Investor
       case "standby_buyer":
-        return "/marketplace"; // Marketplace - menu pertama (skip Dashboard)
+        return "/dashboard"; // Dashboard Standby Buyer
       case "kementerian":
-        return "/peta-potensi"; // Peta Potensi - menu pertama (skip Dashboard)
+        return "/dashboard"; // Dashboard Kementerian
       default:
         return "/dashboard";
     }
@@ -79,6 +80,7 @@ function AppRoutes() {
         <Route path="/pengajuan-proposal" element={<PengajuanProposalPage />} />
         <Route path="/rekomendasi-komoditas" element={<RekomendasiKomoditasPage />} />
         <Route path="/pengajuan-buyer" element={<PengajuanBuyerPage />} />
+        <Route path="/daftar-buyer-kontrak" element={<DaftarBuyerKontrakPage />} />
         <Route path="/ajukan-penjualan" element={<PetaniAjukanJualPage />} />
 
         {/* Role INVESTOR */}
