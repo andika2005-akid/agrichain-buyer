@@ -53,7 +53,7 @@ export default function LoginPage() {
         className="w-full max-w-2xl glass p-8 rounded-2xl"
       >
         <div className="text-center mb-8">
-          <img src="/tanilink1.png" alt="TaniLink Logo" className="w-32 h-33 mx-auto mb-2 object-contain" />
+          <img src="/taralink.png" alt="TaraLink Logo" className="w-32 h-33 mx-auto mb-2 object-contain" />
           <p className="text-sm text-black mt-1">Menghubungkan Petani dan Industri</p>
         </div>
 

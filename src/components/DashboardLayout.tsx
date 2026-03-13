@@ -23,9 +23,9 @@ export default function DashboardLayout() {
       <div className="h-16 border-b border-border bg-white shadow-sm flex items-center justify-between px-6">
         {/* Logo + Toggle Button (Left) */}
         <div className="flex items-center gap-3">
-          <img src="/tanilink1.png" alt="TaniLink Logo" className="w-8 h-8 rounded-lg object-contain" />
+          <img src="/taralink.png" alt="TaraLink Logo" className="w-8 h-8 rounded-lg object-contain" />
           <div className="hidden sm:block">
-            <h1 className="text-sm font-bold text-foreground">TaniLink</h1>
+            <h1 className="text-sm font-bold text-foreground">TaraLink</h1>
             <p className="text-[10px] text-muted-foreground leading-tight">Petani & Industri</p>
           </div>
           
